@@ -3,12 +3,13 @@
  * CASPA School OS – Authentication helpers
  *
  * Functions
- *   session_boot()         – start session with secure settings
- *   current_user()         – return session user array or null
- *   require_login()        – redirect/abort if not logged in
- *   require_role($roles)   – redirect/abort if role not allowed
- *   login_user($user)      – write session, regenerate ID
- *   logout_user()          – destroy session
+ *   session_boot()           – start session with secure settings
+ *   current_user()           – return session user array or null
+ *   require_login()          – redirect/abort if not logged in
+ *   require_role($roles)     – redirect/abort if role not allowed
+ *   login_user($user)        – write session, regenerate ID
+ *   logout_user()            – destroy session
+ *   allowed_class_ids($user) – return int[] of class IDs the user may access
  */
 
 declare(strict_types=1);
@@ -128,4 +129,76 @@ function logout_user(): void
             $p['path'], $p['domain'], $p['secure'], $p['httponly']);
     }
     session_destroy();
+}
+
+// ---------------------------------------------------------------------------
+// Data-scope helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Return the class IDs that the given user is permitted to access.
+ *
+ * Rules (server-side; hiding menus is NOT security):
+ *   principal / admin → every class in the system
+ *   teacher           → classes where they appear in class_subjects.teacher_id
+ *   student           → the single class from their students row
+ *   parent            → classes of all students linked via parent_student
+ *
+ * @param array{id:int,role:string,...} $user  Session user array from current_user()
+ * @return int[]  Sorted, deduplicated list of class IDs (may be empty)
+ */
+function allowed_class_ids(array $user): array
+{
+    require_once __DIR__ . '/db.php';
+
+    $pdo  = db();
+    $role = $user['role'];
+    $uid  = (int) $user['id'];
+    $ids  = [];
+
+    switch ($role) {
+        case 'principal':
+        case 'admin':
+            $rows = $pdo->query('SELECT id FROM classes')->fetchAll(PDO::FETCH_COLUMN);
+            $ids  = array_map('intval', $rows);
+            break;
+
+        case 'teacher':
+            $st = $pdo->prepare('
+                SELECT DISTINCT class_id
+                FROM   class_subjects
+                WHERE  teacher_id = :uid
+            ');
+            $st->execute([':uid' => $uid]);
+            $ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+            break;
+
+        case 'student':
+            $st = $pdo->prepare('
+                SELECT class_id
+                FROM   students
+                WHERE  user_id = :uid
+                LIMIT  1
+            ');
+            $st->execute([':uid' => $uid]);
+            $classId = $st->fetchColumn();
+            $ids = $classId !== false ? [(int) $classId] : [];
+            break;
+
+        case 'parent':
+            $st = $pdo->prepare('
+                SELECT DISTINCT s.class_id
+                FROM   parent_student ps
+                JOIN   parents        p  ON p.id      = ps.parent_id
+                JOIN   students       s  ON s.id      = ps.student_id
+                WHERE  p.user_id = :uid
+                  AND  s.class_id IS NOT NULL
+            ');
+            $st->execute([':uid' => $uid]);
+            $ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+            break;
+    }
+
+    sort($ids);
+    return array_values(array_unique($ids));
 }
