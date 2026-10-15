@@ -1,0 +1,29 @@
+# ============================================================
+# CASPA School OS – .gitignore
+# ============================================================
+
+# --- Secrets ---
+config/config.php
+.env
+*.env
+
+# --- XAMPP / OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Uploads (user content) ---
+uploads/
+
+# --- Temp ---
+tmp/
