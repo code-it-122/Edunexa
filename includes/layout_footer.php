@@ -38,6 +38,29 @@ declare(strict_types=1);
 <script src="<?= APP_URL ?>/assets/js/ui.js"></script>
 <script src="<?= APP_URL ?>/assets/js/api.js"></script>
 
+<!-- Desktop Sidebar Toggle Script -->
+<script>
+$(function () {
+    // Desktop sidebar collapse toggle
+    const $sidebar = $('#sidebarOffcanvas');
+    const $wrapper = $('.caspa-wrapper');
+    const storageKey = 'caspa_sidebar_collapsed';
+
+    // Restore preference
+    if (localStorage.getItem(storageKey) === '1') {
+        $sidebar.addClass('collapsed');
+        $wrapper.addClass('sidebar-collapsed');
+    }
+
+    $('#sidebarToggleBtn').on('click', function () {
+        $sidebar.toggleClass('collapsed');
+        $wrapper.toggleClass('sidebar-collapsed');
+        const isCollapsed = $sidebar.hasClass('collapsed');
+        localStorage.setItem(storageKey, isCollapsed ? '1' : '0');
+    });
+});
+</script>
+
 <?php if (isset($extraJs) && is_array($extraJs)): ?>
     <?php foreach ($extraJs as $jsFile): ?>
     <script src="<?= htmlspecialchars($jsFile, ENT_QUOTES) ?>"></script>
