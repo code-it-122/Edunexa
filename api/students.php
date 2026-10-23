@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_role('admin');
 
-    $fields = json_validate([
+    $fields = validate_input([
         'name'             => 'required|min:2|max:120',
         'email'            => 'required|email|max:180',
         'admission_number' => 'required|min:2|max:40',

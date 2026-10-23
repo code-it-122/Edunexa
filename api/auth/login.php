@@ -45,7 +45,7 @@ if ($attempts >= $maxTries) {
 }
 
 // ── Validate input ──────────────────────────────────────────────────────────
-$fields = json_validate([
+$fields = validate_input([
     'email'    => 'required|email',
     'password' => 'required',
 ]);

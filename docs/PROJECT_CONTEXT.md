@@ -68,7 +68,7 @@ messages         id, sender_id, receiver_id, subject, body, is_read
 **`includes/response.php`**
 - `json_ok($data, $status=200)` → `{"ok":true,"data":...}` + exit
 - `json_fail($error, $status=422)` → `{"ok":false,"error":"..."}` + exit
-- `json_validate(['field'=>'required|email|min:6'])` — 422 on failure, returns trimmed values
+- `validate_input(['field'=>'required|email|min:6'])` — 422 on failure, returns trimmed values
 
 ---
 
@@ -111,7 +111,7 @@ Footer closes `</main></div>`, loads jQuery → Bootstrap JS → `api.js` → `u
 
 ## API Rules (every `api/*.php`)
 1. Call `require_login()` or `require_role()` first.
-2. Use `json_validate()` for input; PDO prepared statements only — no raw SQL.
+2. Use `validate_input()` for input; PDO prepared statements only — no raw SQL.
 3. Verify class ownership with `allowed_class_ids()` — never trust POST `class_id` blindly.
 4. Return only `json_ok()` / `json_fail()`.
 5. `config/config.php` is git-ignored — copy `config.sample.php` to set it up.
@@ -160,6 +160,16 @@ Re-seed: `php database/seed.php` or `http://localhost/Edunexa/database/seed.php`
 - Teacher Dashboard (Real Data):
   - `api/dashboard_teacher.php` (assigned classes with student counts, today's attendance status per class, upcoming assignments, latest 3 announcements, KPIs)
   - `pages/teacher/dashboard.php` (KPI cards, mark attendance quick action, assigned classes attendance tracker, upcoming assignments, school announcements)
+- Principal & Admin Dashboards (Real Data):
+  - `api/dashboard_principal.php` (principal + admin only; KPIs, 7-day attendance trend per class, pending attendance classes, weekly assignments count, announcements)
+  - `api/announcements.php` (GET role-scoped by audience SET, POST principal/admin only with validation)
+  - `pages/principal/dashboard.php` (KPI cards, Chart.js 7-day trend line chart, pending attendance alert table, announcements panel, announcement composer modal)
+  - `pages/admin/dashboard.php` (same as principal plus quick links to Student and Class management)
+- Student & Parent Dashboards (Real Data):
+  - `api/dashboard_student.php` (own data only, attendance %, last 10 records, upcoming assignments, notices; strict 403 on ID tampering)
+  - `pages/student/dashboard.php` (profile card, attendance summary & statistics, last 10 days history table, upcoming assignments, notices modal)
+  - `api/dashboard_parent.php` (returns linked children via parent_student, selected child details, attendance %, last 10 records, assignments, notices; strict 403 on unlinked child)
+  - `pages/parent/dashboard.php` (child switcher pills for multi-child parents, selected child profile card, attendance summary & history, assignments, notices modal)
 - `.gitignore` — secrets, OS files, logs, uploads excluded
 
 ## NEXT 🔜 (suggested order)

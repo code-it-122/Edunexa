@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_role('admin');
 
-    $fields = json_validate([
+    $fields = validate_input([
         'name'             => 'required|min:2|max:80',
         'section'          => 'required|max:10',
         'academic_year_id' => 'required|int',

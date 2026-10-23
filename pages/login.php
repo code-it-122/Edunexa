@@ -8,7 +8,9 @@
 
 declare(strict_types=1);
 
-define('ROOT', __DIR__);
+if (!defined('ROOT')) {
+    define('ROOT', __DIR__);
+}
 
 require_once ROOT . '/includes/auth.php';
 
@@ -275,7 +277,7 @@ if (!empty($_GET['error'])) {
 
         <!-- Forgot password (placeholder) -->
         <div class="login-footer-link">
-            <a href="#">Forgot password?</a>
+            <a href="javascript:void(0)" id="forgotPwLink">Forgot password?</a>
         </div>
     </div><!-- /.login-card -->
 
@@ -351,6 +353,12 @@ $(function () {
     // Clear inline errors when user starts typing
     $('#email').on('input', function () { clearFieldError($(this), 'emailError'); });
     $('#password').on('input', function () { clearFieldError($(this), 'passwordError'); });
+
+    // Forgot password handler
+    $('#forgotPwLink').on('click', function (e) {
+        e.preventDefault();
+        $('#loginErrorMsg').text('Password reset is managed by school administrators. Please contact your IT desk or administrator.').parent().removeClass('d-none');
+    });
 
     /* ── Throttle countdown timer ─────────────────────────────────── */
     let countdownTimer = null;

@@ -8,7 +8,7 @@
  * Functions
  *   json_ok($data, $status)    – {"ok":true,"data":...}
  *   json_fail($error, $status) – {"ok":false,"error":"..."}
- *   json_validate($rules)      – validate $_POST fields; calls json_fail on error
+ *   validate_input($rules)     – validate $_POST fields; calls json_fail on error
  */
 
 declare(strict_types=1);
@@ -56,7 +56,7 @@ function json_fail(string $error, int $status = 422): never
  * @param array<string, string> $rules   ['field' => 'required|email|min:6']
  * @return array<string, string>         Trimmed & validated POST values
  */
-function json_validate(array $rules): array
+function validate_input(array $rules): array
 {
     $values = [];
     $errors = [];
