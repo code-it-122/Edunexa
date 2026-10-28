@@ -17,6 +17,7 @@ if (!defined('ROOT')) {
 }
 
 require_once ROOT . '/includes/auth.php';
+require_once ROOT . '/includes/csrf.php';
 
 session_boot();
 $user = current_user();
@@ -108,6 +109,7 @@ if (!isset($breadcrumbs) || !is_array($breadcrumbs)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="CASPA School OS – role-based school management platform">
     <title><?= $docTitle ?></title>
+    <meta name="csrf-token" content="<?= generate_csrf_token() ?>"/>
 
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

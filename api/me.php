@@ -20,6 +20,7 @@ define('ROOT', dirname(__DIR__));
 
 require_once ROOT . '/includes/auth.php';
 require_once ROOT . '/includes/response.php';
+require_once ROOT . '/includes/csrf_guard.php';
 
 // Enforce login – sends 401 JSON and exits if not authenticated
 require_login();
