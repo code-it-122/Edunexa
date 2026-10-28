@@ -17,7 +17,6 @@ if (!defined('ROOT')) {
 }
 
 require_once ROOT . '/includes/auth.php';
-require_once ROOT . '/includes/csrf.php';
 
 session_boot();
 $user = current_user();
@@ -40,6 +39,7 @@ $roleMenus = [
         ['label' => 'Dashboard',     'icon' => 'bi-speedometer2',  'href' => APP_URL . '/pages/admin/dashboard.php'],
         ['label' => 'Students',      'icon' => 'bi-mortarboard',   'href' => APP_URL . '/pages/admin/students.php'],
         ['label' => 'Classes',       'icon' => 'bi-building',      'href' => APP_URL . '/pages/admin/classes.php'],
+        ['label' => 'Attendance Overview', 'icon' => 'bi-calendar-check', 'href' => APP_URL . '/pages/admin/attendance.php'],
         ['label' => 'Announcements', 'icon' => 'bi-megaphone',     'href' => APP_URL . '/pages/admin/announcements.php'],
     ],
     'principal' => [
@@ -109,7 +109,6 @@ if (!isset($breadcrumbs) || !is_array($breadcrumbs)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="CASPA School OS – role-based school management platform">
     <title><?= $docTitle ?></title>
-    <meta name="csrf-token" content="<?= generate_csrf_token() ?>"/>
 
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

@@ -17,27 +17,9 @@
  *   • 401 → redirect to /index.php?error=session_expired
  *   • Network errors are caught and converted to rejections
  *   • Content-Type: application/x-www-form-urlencoded for POST
- *   • CSRF: every non-GET jQuery request (api.* AND direct $.ajax / $.post)
- *     gets an X-CSRF-Token header from <meta name="csrf-token">.
- *     This is done once, globally, by the prefilter below.
  */
 
 /* global $, APP_URL */
-
-// ---------------------------------------------------------------------------
-// CSRF: registered ONCE at load time, covers every jQuery AJAX call on the page.
-// Do not add the header anywhere else (a second copy would send the token twice
-// and the server would reject the combined value).
-// ---------------------------------------------------------------------------
-$.ajaxPrefilter(function (options, originalOptions, jqXHR) {
-  var method = (options.type || options.method || 'GET').toUpperCase();
-  if (method !== 'GET' && method !== 'HEAD' && !options.crossDomain) {
-    var meta = document.querySelector('meta[name="csrf-token"]');
-    if (meta && meta.content) {
-      jqXHR.setRequestHeader('X-CSRF-Token', meta.content);
-    }
-  }
-});
 
 const api = (() => {
   'use strict';

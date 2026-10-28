@@ -1,0 +1,110 @@
+warning: in the working copy of 'api/announcements.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/assignment_delete.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/assignments.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/attendance/list.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/attendance/my_class_subjects.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/attendance/save.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/auth/login.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/auth/logout.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/classes.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/dashboard_principal.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/dashboard_teacher.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/me.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/student.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/students.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'assets/js/api.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/PROJECT_CONTEXT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'includes/auth.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'includes/layout_footer.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'includes/layout_header.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'includes/response.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/admin/announcements.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/admin/classes.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/admin/dashboard.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/admin/students.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/login.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/parent/assignments.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/parent/attendance.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/parent/dashboard.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/parent/notices.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/principal/announcements.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/principal/attendance.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/principal/dashboard.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/principal/students.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/shared/student_profile.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/student/assignments.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/student/attendance.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/student/dashboard.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/teacher/classes.php', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pages/teacher/dashboard.php', LF will be replaced by CRLF the next time Git touches it
+ api/.gitkeep                                    |   2 [31m-[m
+ api/announcements.php                           | 167 [32m+++[m[31m----[m
+ api/assignment_delete.php                       |   1 [31m-[m
+ api/assignments.php                             |   1 [31m-[m
+ api/attendance/list.php                         |   1 [31m-[m
+ api/attendance/my_class_subjects.php            |   1 [31m-[m
+ api/attendance/save.php                         |   1 [31m-[m
+ api/auth/login.php                              |   1 [31m-[m
+ api/auth/logout.php                             |   1 [31m-[m
+ api/classes.php                                 |   1 [31m-[m
+ api/dashboard_parent.php                        | 232 [31m---------[m
+ api/dashboard_principal.php                     | 246 [32m++++[m[31m------[m
+ api/dashboard_student.php                       | 184 [31m-------[m
+ api/dashboard_teacher.php                       |   1 [31m-[m
+ api/exams/analytics.php                         |  89 [31m----[m
+ api/exams/grade_bands.php                       |  52 [31m--[m
+ api/exams/index.php                             |  70 [31m---[m
+ api/exams/marks.php                             | 178 [31m-------[m
+ api/exams/report_card.php                       | 144 [31m------[m
+ api/exams/subjects.php                          |  72 [31m---[m
+ api/lesson_plans/index.php                      | 164 [31m-------[m
+ api/me.php                                      |   1 [31m-[m
+ api/student.php                                 |   7 [32m+[m[31m-[m
+ api/students.php                                |  17 [32m+[m[31m-[m
+ api/syllabus/index.php                          |  90 [31m----[m
+ api/timetable/periods.php                       |  17 [31m-[m
+ api/timetable/slots.php                         | 128 [31m-----[m
+ api/timetable/today.php                         | 113 [31m-----[m
+ assets/js/api.js                                |  20 [32m+[m[31m-[m
+ database/migrations/001_academics.sql           | 163 [31m-------[m
+ database/migrations/002_platform.sql            |  87 [31m----[m
+ database/migrations/003_approvals_and_roles.sql |  61 [31m---[m
+ docs/PROJECT_CONTEXT.md                         |  78 [32m++[m[31m-[m
+ includes/auth.php                               |  68 [32m+++[m
+ includes/csrf.php                               |  41 [31m--[m
+ includes/csrf_guard.php                         |  30 [31m--[m
+ includes/layout_footer.php                      |   2 [32m+[m[31m-[m
+ includes/layout_header.php                      |   3 [32m+[m[31m-[m
+ includes/permissions.php                        | 134 [31m-----[m
+ includes/response.php                           |   2 [32m+[m[31m-[m
+ pages/admin/.gitkeep                            |   1 [31m-[m
+ pages/admin/announcements.php                   | 248 [32m+[m[31m---------[m
+ pages/admin/classes.php                         |   1 [31m-[m
+ pages/admin/dashboard.php                       | 490 [32m+[m[31m------------------[m
+ pages/admin/exams.php                           | 283 [31m-----------[m
+ pages/admin/students.php                        |   1 [31m-[m
+ pages/admin/timetable.php                       | 205 [31m--------[m
+ pages/login.php                                 |  14 [32m+[m[31m-[m
+ pages/parent/.gitkeep                           |   1 [31m-[m
+ pages/parent/assignments.php                    |   4 [32m+[m[31m-[m
+ pages/parent/attendance.php                     | 253 [32m+[m[31m---------[m
+ pages/parent/dashboard.php                      | 622 [32m+[m[31m-----------------------[m
+ pages/parent/notices.php                        | 153 [32m+[m[31m-----[m
+ pages/parent/timetable.php                      |  80 [31m---[m
+ pages/principal/.gitkeep                        |   1 [31m-[m
+ pages/principal/announcements.php               |   7 [32m+[m[31m-[m
+ pages/principal/attendance.php                  |   7 [32m+[m[31m-[m
+ pages/principal/dashboard.php                   | 537 [32m+[m[31m-------------------[m
+ pages/principal/students.php                    |   9 [32m+[m[31m-[m
+ pages/principal/timetable.php                   | 205 [31m--------[m
+ pages/shared/student_profile.php                |   9 [32m+[m[31m-[m
+ pages/student/.gitkeep                          |   1 [31m-[m
+ pages/student/assignments.php                   |   4 [32m+[m[31m-[m
+ pages/student/attendance.php                    | 197 [32m+[m[31m-------[m
+ pages/student/dashboard.php                     | 527 [32m+[m[31m-------------------[m
+ pages/student/timetable.php                     |  80 [31m---[m
+ pages/teacher/.gitkeep                          |   1 [31m-[m
+ pages/teacher/classes.php                       |   6 [31m-[m
+ pages/teacher/dashboard.php                     |   4 [32m+[m[31m-[m
+ pages/teacher/timetable.php                     |  89 [31m----[m
+ 70 files changed, 333 insertions(+), 6378 deletions(-)

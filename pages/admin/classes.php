@@ -16,7 +16,6 @@ require_once ROOT . '/includes/auth.php';
 require_once ROOT . '/includes/db.php';
 
 session_boot();
-require_login();
 require_role(['admin', 'principal', 'teacher']);
 
 $user      = current_user();

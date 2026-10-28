@@ -202,3 +202,71 @@ function allowed_class_ids(array $user): array
     sort($ids);
     return array_values(array_unique($ids));
 }
+
+// ---------------------------------------------------------------------------
+// Per-student scope (stricter than class scope)
+// ---------------------------------------------------------------------------
+
+/**
+ * Student IDs a student/parent user is limited to.
+ *
+ *   student → only their own students row
+ *   parent  → only children linked through parent_student
+ *   others  → null (no per-student restriction; class scope applies)
+ *
+ * Class scope alone is NOT enough for students and parents: it would let a
+ * classmate (or a classmate's parent) read other children's records.
+ *
+ * @param array{id:int,role:string,...} $user
+ * @return int[]|null
+ */
+function restricted_student_ids(array $user): ?array
+{
+    require_once __DIR__ . '/db.php';
+
+    $role = $user['role'];
+    $uid  = (int) $user['id'];
+
+    if ($role === 'student') {
+        $st = db()->prepare('SELECT id FROM students WHERE user_id = :uid');
+        $st->execute([':uid' => $uid]);
+        return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    if ($role === 'parent') {
+        $st = db()->prepare('
+            SELECT ps.student_id
+            FROM   parent_student ps
+            JOIN   parents p ON p.id = ps.parent_id
+            WHERE  p.user_id = :uid
+        ');
+        $st->execute([':uid' => $uid]);
+        return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    return null;
+}
+
+/**
+ * May this user view this student's record?
+ *
+ *   principal / admin → yes
+ *   teacher           → only students in classes they teach
+ *   student           → only themselves
+ *   parent            → only their linked children
+ *
+ * @param array{id:int,role:string,...} $user
+ * @param array{id:int|string,class_id:int|string|null,...} $student  Row with at least id and class_id
+ */
+function can_view_student(array $user, array $student): bool
+{
+    $restricted = restricted_student_ids($user);
+    if ($restricted !== null) {
+        return in_array((int) $student['id'], $restricted, true);
+    }
+
+    if ($student['class_id'] === null) {
+        return false;
+    }
+    return in_array((int) $student['class_id'], allowed_class_ids($user), true);
+}

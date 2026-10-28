@@ -2,7 +2,7 @@
 /**
  * CASPA School OS – pages/principal/announcements.php
  *
- * Announcements Management for Principal (delegates to shared announcements page).
+ * Role check, then the shared page (announcements.php).
  */
 
 declare(strict_types=1);
@@ -10,9 +10,10 @@ declare(strict_types=1);
 define('ROOT', dirname(__DIR__, 2));
 
 require_once ROOT . '/includes/auth.php';
+require_once ROOT . '/includes/db.php';
 
 session_boot();
-require_login();
 require_role('principal');
 
-require_once ROOT . '/pages/admin/announcements.php';
+$pageTitle = 'Announcements';
+require_once ROOT . '/pages/shared/announcements.php';

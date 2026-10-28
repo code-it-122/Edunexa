@@ -8,9 +8,7 @@
 
 declare(strict_types=1);
 
-if (!defined('ROOT')) {
-    define('ROOT', __DIR__);
-}
+define('ROOT', dirname(__DIR__));
 
 require_once ROOT . '/includes/auth.php';
 
@@ -277,7 +275,7 @@ if (!empty($_GET['error'])) {
 
         <!-- Forgot password (placeholder) -->
         <div class="login-footer-link">
-            <a href="javascript:void(0)" id="forgotPwLink">Forgot password?</a>
+            <a href="#">Forgot password?</a>
         </div>
     </div><!-- /.login-card -->
 
@@ -290,7 +288,7 @@ if (!empty($_GET['error'])) {
 
 <!-- Bootstrap JS (for any future BS components) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmA5e7XoPRMNb3OdoSt17f3PqaB"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
 
 <script>
@@ -353,12 +351,6 @@ $(function () {
     // Clear inline errors when user starts typing
     $('#email').on('input', function () { clearFieldError($(this), 'emailError'); });
     $('#password').on('input', function () { clearFieldError($(this), 'passwordError'); });
-
-    // Forgot password handler
-    $('#forgotPwLink').on('click', function (e) {
-        e.preventDefault();
-        $('#loginErrorMsg').text('Password reset is managed by school administrators. Please contact your IT desk or administrator.').parent().removeClass('d-none');
-    });
 
     /* ── Throttle countdown timer ─────────────────────────────────── */
     let countdownTimer = null;

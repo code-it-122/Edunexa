@@ -8,7 +8,7 @@
  * Functions
  *   json_ok($data, $status)    – {"ok":true,"data":...}
  *   json_fail($error, $status) – {"ok":false,"error":"..."}
- *   validate_input($rules)     – validate $_POST fields; calls json_fail on error
+ *   validate_input($rules)      – validate $_POST fields; calls json_fail on error
  */
 
 declare(strict_types=1);

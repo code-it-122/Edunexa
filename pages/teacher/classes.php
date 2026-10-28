@@ -9,10 +9,4 @@ declare(strict_types=1);
 
 define('ROOT', dirname(__DIR__, 2));
 
-require_once ROOT . '/includes/auth.php';
-
-session_boot();
-require_login();
-require_role('teacher');
-
 require_once ROOT . '/pages/admin/classes.php';

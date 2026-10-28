@@ -4,7 +4,8 @@
  *
  * GET ?id=
  * Returns detailed student profile, linked parents, and attendance summary.
- * Enforces allowed_class_ids scope: returns 403 if outside user's scope.
+ * Enforces scope via can_view_student(): teachers by class, students only themselves,
+ * parents only their linked children. Returns 403 otherwise.
  */
 
 declare(strict_types=1);
@@ -18,7 +19,6 @@ if (!defined('ROOT')) {
 require_once ROOT . '/includes/db.php';
 require_once ROOT . '/includes/auth.php';
 require_once ROOT . '/includes/response.php';
-require_once ROOT . '/includes/csrf_guard.php';
 
 session_boot();
 require_login();
@@ -59,8 +59,7 @@ if (!$student) {
 }
 
 // 2. Security Scope Check
-$allowed = allowed_class_ids($user);
-if ($student['class_id'] === null || !in_array((int) $student['class_id'], $allowed, true)) {
+if (!can_view_student($user, $student)) {
     json_fail('Forbidden: you do not have permission to view this student.', 403);
 }
 

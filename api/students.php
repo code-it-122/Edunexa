@@ -21,7 +21,6 @@ if (!defined('ROOT')) {
 require_once ROOT . '/includes/db.php';
 require_once ROOT . '/includes/auth.php';
 require_once ROOT . '/includes/response.php';
-require_once ROOT . '/includes/csrf_guard.php';
 
 session_boot();
 require_login();
@@ -68,6 +67,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $conditions[] = "s.class_id IN ($placeholders)";
     foreach ($targetClassIds as $cid) {
         $params[] = $cid;
+    }
+
+    // Students and parents may only ever see their own / linked children,
+    // never the rest of the class.
+    $restrictedIds = restricted_student_ids($user);
+    if ($restrictedIds !== null) {
+        if (empty($restrictedIds)) {
+            json_ok([
+                'students' => [], 'total' => 0, 'page' => 1,
+                'per_page' => $perPage, 'total_pages' => 0, 'can_create' => false,
+            ]);
+        }
+        $conditions[] = 's.id IN (' . implode(',', array_fill(0, count($restrictedIds), '?')) . ')';
+        foreach ($restrictedIds as $sid) {
+            $params[] = $sid;
+        }
     }
 
     // Search query

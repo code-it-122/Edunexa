@@ -123,6 +123,15 @@ Footer closes `</main></div>`, loads jQuery → Bootstrap JS → `api.js` → `u
 |---|---|
 | Principal | `principal@demo.caspa` |
 | Admin | `admin@demo.caspa` |
+| Teachers | `teacher1@demo.caspa` (Gr 8-A, Gr 9-A English), `teacher2@demo.caspa` (Gr 9-A), `teacher3@demo.caspa` (Gr 8-A Social Studies) |
+| Students | `student1@demo.caspa` (Gr 8-A), `student2@demo.caspa` (Gr 9-A) |
+| Parents | `parent1@demo.caspa` (child: student1), `parent2@demo.caspa` (child: student2) |
+
+Seed: `php database/seed.php` then optionally `php database/seed_attendance.php` (or open them in the browser from localhost).
+
+---|---|
+| Principal | `principal@demo.caspa` |
+| Admin | `admin@demo.caspa` |
 | Teacher (Gr 8-A) | `teacher1@demo.caspa` |
 | Teacher (Gr 9-A) | `teacher2@demo.caspa` |
 | Students | `student1@demo.caspa` … `student8@demo.caspa` |
@@ -133,47 +142,28 @@ Re-seed: `php database/seed.php` or `http://localhost/Edunexa/database/seed.php`
 ---
 
 ## DONE ✅
-- Full MySQL schema (`database/schema.sql`) + idempotent seeder
-- `config/`, `includes/` helpers (db, auth, response, layout)
-- Design system CSS + `api.js` + `ui.js`
-- Common responsive layout with collapsible/mobile offcanvas sidebar & CASPA AI drawer
-- Auth system: `api/auth/login.php`, `api/auth/logout.php`, `pages/login.php`
-- Role dashboards (x5): `pages/{principal,admin,teacher,student,parent}/dashboard.php`
-- Student & Class Management:
-  - `api/classes.php` (GET scoped, POST admin create)
-  - `api/students.php` (GET search/filter/pagination scoped, POST admin create)
-  - `api/student.php` (GET profile + attendance summary, 403 scope check)
-  - `pages/admin/students.php` (search, class filter, pagination, add student modal)
-  - `pages/admin/classes.php` (classes list + add class modal)
-  - `pages/shared/student_profile.php` (profile card, parents, attendance rate & history, 403 URL guard)
-- Attendance Marking (per class_subject per date):
-  - `api/attendance/my_class_subjects.php` (teacher assigned class+subject pairs)
-  - `api/attendance/list.php` (roster + existing marks + counts, 403 authorization guard)
-  - `api/attendance/save.php` (upsert with transaction, future date & class membership validation)
-  - `pages/teacher/attendance.php` (dropdown selector, date picker, segmented toggles, mark-all-present, live summary chips)
-- Assignments Module:
-  - `api/assignments.php` (GET role-scoped by allowed classes/taught subjects, POST teacher create with due date >= today validation)
-  - `api/assignment_delete.php` (POST teacher delete own assignment with 403 creator guard)
-  - `pages/teacher/assignments.php` (list + search/class filter + create modal with validation + delete prompt)
-  - `pages/student/assignments.php` (cards view with due dates, overdue highlighted in warning color #D97706, subject/status filters)
-  - `pages/parent/assignments.php` (linked child class assignments cards view, child selector for multiple children)
-- Teacher Dashboard (Real Data):
-  - `api/dashboard_teacher.php` (assigned classes with student counts, today's attendance status per class, upcoming assignments, latest 3 announcements, KPIs)
-  - `pages/teacher/dashboard.php` (KPI cards, mark attendance quick action, assigned classes attendance tracker, upcoming assignments, school announcements)
-- Principal & Admin Dashboards (Real Data):
-  - `api/dashboard_principal.php` (principal + admin only; KPIs, 7-day attendance trend per class, pending attendance classes, weekly assignments count, announcements)
-  - `api/announcements.php` (GET role-scoped by audience SET, POST principal/admin only with validation)
-  - `pages/principal/dashboard.php` (KPI cards, Chart.js 7-day trend line chart, pending attendance alert table, announcements panel, announcement composer modal)
-  - `pages/admin/dashboard.php` (same as principal plus quick links to Student and Class management)
-- Student & Parent Dashboards (Real Data):
-  - `api/dashboard_student.php` (own data only, attendance %, last 10 records, upcoming assignments, notices; strict 403 on ID tampering)
-  - `pages/student/dashboard.php` (profile card, attendance summary & statistics, last 10 days history table, upcoming assignments, notices modal)
-  - `api/dashboard_parent.php` (returns linked children via parent_student, selected child details, attendance %, last 10 records, assignments, notices; strict 403 on unlinked child)
-  - `pages/parent/dashboard.php` (child switcher pills for multi-child parents, selected child profile card, attendance summary & history, assignments, notices modal)
-- `.gitignore` — secrets, OS files, logs, uploads excluded
+- Full MySQL schema (`database/schema.sql`) + idempotent seeders (`seed.php`, optional `seed_attendance.php`)
+- `config/`, `includes/` helpers (db, auth, response, layout), design-system CSS, `api.js`, `ui.js`
+- Responsive layout: collapsible/mobile offcanvas sidebar, CASPA AI placeholder drawer
+- Auth: `api/auth/login.php`, `api/auth/logout.php`, `pages/login.php`
+- **Teacher:** dashboard (`api/dashboard_teacher.php`), attendance marking per class_subject (`api/attendance/*`), assignments (`api/assignments.php`, `api/assignment_delete.php`)
+- **Admin / shared:** student directory + profile (`api/students.php`, `api/student.php`, `pages/shared/student_profile.php`), class management (`api/classes.php`)
+- **Principal + Admin:** dashboard (`api/dashboard_principal.php`, `pages/shared/_overview_dashboard.php`), attendance overview (`api/attendance/overview.php`, `pages/shared/attendance_overview.php`), announcements (`api/announcements.php`, `pages/shared/announcements.php`)
+- **Student + Parent:** dashboard (`api/dashboard_family.php`, `pages/shared/_family_dashboard.php`), attendance (`api/my_attendance.php`, `pages/shared/_family_attendance.php`), assignments, parent notices (`pages/parent/notices.php`)
+- Per-student scope: `restricted_student_ids()` and `can_view_student()` in `includes/auth.php` (student = self only, parent = linked children only, teacher = their classes, principal/admin = all)
 
-## NEXT 🔜 (suggested order)
-1. Grades & Grading workflow
-2. Announcements (audience-filtered)
-3. Internal Messaging
-4. Forgot / Reset Password (token-based)
+## Conventions added
+- **Page scripts:** never put a raw `<script>` before the footer (jQuery is loaded by the footer, so `$` would be undefined).
+  Wrap the page JS in `<?php ob_start(); ?> ... <?php $inlineJs = ob_get_clean(); ?>`; `layout_footer.php` prints it after jQuery.
+  Extra libraries go in `$extraJs = [...]` (printed before `$inlineJs`).
+- **Shared pages** live in `pages/shared/`. Files starting with `_` are partials: the role's own entry file calls `require_role(...)` first, sets `$pageRole`, then includes the partial.
+- **Input validation helper is `validate_input()`** (it was `json_validate()`, which clashes with the built-in function in PHP 8.3+).
+- **Attendance rate** everywhere = present records / all records.
+- **Student/parent data:** use `restricted_student_ids($user)`; never scope by class alone.
+
+## NEXT 🔜 (remaining from the design guidelines, by priority)
+1. P0: timetable; exams, marks entry and report card (the `grades` table exists); campus + role/workspace selector; forgot-password / OTP; global search; notification center
+2. P0: teacher / employee profiles; subjects, curriculum and lesson plans
+3. P1: admissions, fees/accounts, HR/payroll, transport, hostel, library, safety/safeguarding workflows
+4. P2: events/clubs/alumni, analytics, working CASPA AI (server-side key; role-aware)
+5. Platform: role builder, permission matrix, audit logs, CSRF tokens

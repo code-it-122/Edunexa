@@ -22,7 +22,6 @@ if (!defined('ROOT')) {
 require_once ROOT . '/includes/db.php';
 require_once ROOT . '/includes/auth.php';
 require_once ROOT . '/includes/response.php';
-require_once ROOT . '/includes/csrf_guard.php';
 
 session_boot();
 require_login();

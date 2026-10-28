@@ -2,15 +2,14 @@
 /**
  * CASPA School OS – api/announcements.php
  *
- * GET  ?role=  Returns published announcements visible to the caller's role.
- *              principal/admin see all; others see only announcements whose
- *              audience SET includes their role.
+ * GET   Role-scoped list of published, non-expired announcements.
+ *         principal / admin : every announcement (they manage them)
+ *         teacher / student / parent : only those whose audience includes their role
+ *       Optional ?limit=N (1-50, default 20)
  *
- * POST (principal | admin only)
- *   title     required, max 200
- *   body      required
- *   audience  required, comma-separated subset of principal,admin,teacher,student,parent
- *   expires_at  optional YYYY-MM-DD
+ * POST  principal / admin only. JSON body:
+ *         { title, body, audience: ["teacher","student",...] }
+ *       Published immediately. Returns the created announcement.
  */
 
 declare(strict_types=1);
@@ -24,7 +23,6 @@ if (!defined('ROOT')) {
 require_once ROOT . '/includes/db.php';
 require_once ROOT . '/includes/auth.php';
 require_once ROOT . '/includes/response.php';
-require_once ROOT . '/includes/csrf_guard.php';
 
 session_boot();
 require_login();
@@ -32,125 +30,108 @@ require_login();
 $user = current_user();
 $pdo  = db();
 
-// ── GET ────────────────────────────────────────────────────────────────────
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $role   = $user['role'];
-    $limit  = min((int)($_GET['limit'] ?? 20), 100);
-    $offset = max((int)($_GET['offset'] ?? 0), 0);
+const ANNOUNCEMENT_ROLES = ['principal', 'admin', 'teacher', 'student', 'parent'];
 
-    if (in_array($role, ['principal', 'admin'], true)) {
-        // See all published announcements
-        $sql = "
-            SELECT a.id, a.title, a.body, a.audience, a.published_at, a.expires_at,
-                   a.created_at, u.name AS author_name
-            FROM   announcements a
-            JOIN   users u ON u.id = a.created_by
-            WHERE  a.published_at IS NOT NULL
-            ORDER  BY a.published_at DESC, a.id DESC
-            LIMIT  :lim OFFSET :off
-        ";
-        $st = $pdo->prepare($sql);
-        $st->bindValue(':lim', $limit, PDO::PARAM_INT);
-        $st->bindValue(':off', $offset, PDO::PARAM_INT);
-        $st->execute();
-    } else {
-        // Scope by audience SET containing the user's role
-        $sql = "
-            SELECT a.id, a.title, a.body, a.audience, a.published_at, a.expires_at,
-                   a.created_at, u.name AS author_name
-            FROM   announcements a
-            JOIN   users u ON u.id = a.created_by
-            WHERE  FIND_IN_SET(:role, a.audience) > 0
-              AND  a.published_at IS NOT NULL
-              AND  a.published_at <= NOW()
-              AND  (a.expires_at IS NULL OR a.expires_at >= NOW())
-            ORDER  BY a.published_at DESC, a.id DESC
-            LIMIT  :lim OFFSET :off
-        ";
-        $st = $pdo->prepare($sql);
-        $st->bindValue(':role', $role, PDO::PARAM_STR);
-        $st->bindValue(':lim',  $limit,  PDO::PARAM_INT);
-        $st->bindValue(':off',  $offset, PDO::PARAM_INT);
-        $st->execute();
+// ── GET ──────────────────────────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 20;
+    $limit = max(1, min(50, $limit));
+
+    $isManager = in_array($user['role'], ['principal', 'admin'], true);
+
+    $sql = "
+        SELECT a.id, a.title, a.body, a.audience, a.published_at, a.expires_at,
+               u.name AS author_name
+        FROM announcements a
+        JOIN users u ON u.id = a.created_by
+        WHERE a.published_at IS NOT NULL
+          AND a.published_at <= NOW()
+          AND (a.expires_at IS NULL OR a.expires_at >= NOW())
+    ";
+    $params = [];
+
+    if (!$isManager) {
+        $sql .= " AND FIND_IN_SET(:role, a.audience) > 0";
+        $params[':role'] = $user['role'];
     }
 
-    json_ok(['announcements' => $st->fetchAll()]);
+    // $limit is an int clamped above, safe to inline (LIMIT cannot be bound with emulation off)
+    $sql .= " ORDER BY a.published_at DESC, a.id DESC LIMIT " . $limit;
+
+    $st = $pdo->prepare($sql);
+    $st->execute($params);
+    $rows = $st->fetchAll();
+
+    foreach ($rows as &$r) {
+        $r['audience'] = $r['audience'] === '' ? [] : explode(',', (string) $r['audience']);
+    }
+    unset($r);
+
+    json_ok([
+        'announcements' => $rows,
+        'can_create'    => $isManager,
+    ]);
 }
 
-// ── POST ───────────────────────────────────────────────────────────────────
+// ── POST ─────────────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_role(['principal', 'admin']);
 
-    // Accept JSON body or form-encoded
-    $input = $_POST;
-    $raw   = file_get_contents('php://input');
-    if ($raw) {
-        $decoded = json_decode($raw, true);
+    $input   = $_POST;
+    $rawBody = file_get_contents('php://input');
+    if ($rawBody) {
+        $decoded = json_decode($rawBody, true);
         if (is_array($decoded)) {
             $input = array_merge($input, $decoded);
         }
     }
 
-    $title     = trim((string)($input['title'] ?? ''));
-    $body      = trim((string)($input['body']  ?? ''));
-    $audienceRaw = trim((string)($input['audience'] ?? ''));
-    $expiresAt = trim((string)($input['expires_at'] ?? ''));
+    $title    = trim((string) ($input['title'] ?? ''));
+    $body     = trim((string) ($input['body'] ?? ''));
+    $audience = $input['audience'] ?? [];
 
-    // Validate title
     if ($title === '') {
         json_fail('Title is required.', 422);
     }
     if (mb_strlen($title) > 200) {
         json_fail('Title must be at most 200 characters.', 422);
     }
-
-    // Validate body
     if ($body === '') {
         json_fail('Message body is required.', 422);
     }
+    if (mb_strlen($body) > 5000) {
+        json_fail('Message body must be at most 5000 characters.', 422);
+    }
+    if (!is_array($audience) || count($audience) === 0) {
+        json_fail('Choose at least one audience.', 422);
+    }
 
-    // Validate audience
-    $allowedRoles = ['principal', 'admin', 'teacher', 'student', 'parent'];
-    if ($audienceRaw === '') {
-        json_fail('Audience is required.', 422);
-    }
-    $audienceParts = array_filter(array_map('trim', explode(',', $audienceRaw)));
-    foreach ($audienceParts as $ap) {
-        if (!in_array($ap, $allowedRoles, true)) {
-            json_fail("Invalid audience value: '{$ap}'.", 422);
+    $clean = [];
+    foreach ($audience as $a) {
+        $a = strtolower(trim((string) $a));
+        if (!in_array($a, ANNOUNCEMENT_ROLES, true)) {
+            json_fail('Invalid audience value.', 422);
         }
+        $clean[$a] = true;
     }
-    $audienceValue = implode(',', $audienceParts);
-
-    // Validate expires_at (optional)
-    $expiresAtValue = null;
-    if ($expiresAt !== '') {
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $expiresAt)) {
-            json_fail('Expiry date must be in YYYY-MM-DD format.', 422);
-        }
-        if ($expiresAt < date('Y-m-d')) {
-            json_fail('Expiry date cannot be in the past.', 422);
-        }
-        $expiresAtValue = $expiresAt . ' 23:59:59';
-    }
+    $audienceStr = implode(',', array_keys($clean));
 
     $st = $pdo->prepare("
-        INSERT INTO announcements (title, body, audience, created_by, published_at, expires_at)
-        VALUES (:title, :body, :audience, :created_by, NOW(), :expires_at)
+        INSERT INTO announcements (title, body, audience, created_by, published_at)
+        VALUES (:title, :body, :audience, :uid, NOW())
     ");
     $st->execute([
-        ':title'      => $title,
-        ':body'       => $body,
-        ':audience'   => $audienceValue,
-        ':created_by' => (int)$user['id'],
-        ':expires_at' => $expiresAtValue,
+        ':title'    => $title,
+        ':body'     => $body,
+        ':audience' => $audienceStr,
+        ':uid'      => (int) $user['id'],
     ]);
 
-    $newId = (int)$pdo->lastInsertId();
-
     json_ok([
-        'id'      => $newId,
-        'message' => "Announcement '{$title}' published successfully.",
+        'id'       => (int) $pdo->lastInsertId(),
+        'title'    => $title,
+        'audience' => array_keys($clean),
+        'message'  => 'Announcement published.',
     ], 201);
 }
 

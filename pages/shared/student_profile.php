@@ -3,7 +3,7 @@
  * CASPA School OS – pages/shared/student_profile.php
  *
  * Detailed Student Profile & Attendance Summary
- * Access: Scoped via allowed_class_ids($user).
+ * Access: Scoped via can_view_student() (teacher by class, student self only, parent linked children only).
  *         If student's class is outside scope: returns 403 Access Denied.
  */
 
@@ -44,12 +44,7 @@ $st->execute([':id' => $studentId]);
 $student = $st->fetch();
 
 // 2. Scope check: verify allowed_class_ids
-$allowedClasses = allowed_class_ids($user);
-$isAllowed = false;
-
-if ($student && $student['class_id'] !== null && in_array((int) $student['class_id'], $allowedClasses, true)) {
-    $isAllowed = true;
-}
+$isAllowed = $student ? can_view_student($user, $student) : false;
 
 if ($student && !$isAllowed) {
     http_response_code(403);

@@ -2,13 +2,15 @@
 /**
  * CASPA School OS – api/dashboard_principal.php
  *
- * GET (principal | admin only):
- * Returns school-wide dashboard data:
- *   - KPIs: total students, total teachers, total classes, today's school attendance %
- *   - Per-class attendance for last 7 days (for chart)
- *   - Classes where attendance is NOT yet marked today
- *   - Assignments created this week
- *   - Latest 5 announcements (role-scoped)
+ * GET (principal + admin only). School-wide overview, real data only:
+ *   kpis                 total students / teachers / classes, today's attendance %,
+ *                        assignments created in the last 7 days
+ *   attendance_trend     last 7 days (oldest first): records, present, rate
+ *   pending_attendance   class+subject periods with a teacher but nothing marked today
+ *   announcements        latest 5 published announcements
+ *
+ * Attendance rate = present records / all records (same definition as api/student.php).
+ * Attendance is stored per class_subject per date, so "pending" is per class+subject.
  */
 
 declare(strict_types=1);
@@ -22,7 +24,6 @@ if (!defined('ROOT')) {
 require_once ROOT . '/includes/db.php';
 require_once ROOT . '/includes/auth.php';
 require_once ROOT . '/includes/response.php';
-require_once ROOT . '/includes/csrf_guard.php';
 
 session_boot();
 require_login();
@@ -34,175 +35,96 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 $pdo   = db();
 $today = date('Y-m-d');
-// Build last-7-days date list (oldest first, today last)
-$last7 = [];
-for ($i = 6; $i >= 0; $i--) {
-    $last7[] = date('Y-m-d', strtotime("-{$i} days"));
-}
-$weekStart = date('Y-m-d', strtotime('monday this week'));
-$weekEnd   = date('Y-m-d', strtotime('sunday this week'));
 
-// ── 1. KPIs ────────────────────────────────────────────────────────────────
+// ── 1. Headcounts ────────────────────────────────────────────────────────────
 $totalStudents = (int) $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
-$totalTeachers = (int) $pdo->query(
-    "SELECT COUNT(*) FROM users WHERE role = 'teacher' AND is_active = 1"
-)->fetchColumn();
+$totalTeachers = (int) $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'teacher' AND is_active = 1")->fetchColumn();
 $totalClasses  = (int) $pdo->query("SELECT COUNT(*) FROM classes")->fetchColumn();
 
-// Today's overall attendance %:
-// Among all attendance rows for today, what % are 'present' or 'late'?
-$todayAtt = $pdo->prepare("
-    SELECT
-        COUNT(*)                                                     AS total_marked,
-        SUM(CASE WHEN a.status IN ('present','late') THEN 1 ELSE 0 END) AS present_count
-    FROM attendance a
-    WHERE a.date = :today
+// ── 2. Attendance for the last 7 days (including today) ─────────────────────
+$from = date('Y-m-d', strtotime('-6 days'));
+$st = $pdo->prepare("
+    SELECT date,
+           COUNT(*) AS records,
+           SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) AS present
+    FROM attendance
+    WHERE date BETWEEN :from AND :to
+    GROUP BY date
 ");
-$todayAtt->execute([':today' => $today]);
-$attRow = $todayAtt->fetch();
-$todayAttendancePct = 0;
-if ((int)($attRow['total_marked'] ?? 0) > 0) {
-    $todayAttendancePct = round(
-        ((int)$attRow['present_count'] / (int)$attRow['total_marked']) * 100,
-        1
-    );
+$st->execute([':from' => $from, ':to' => $today]);
+$byDate = [];
+foreach ($st->fetchAll() as $r) {
+    $byDate[$r['date']] = ['records' => (int) $r['records'], 'present' => (int) $r['present']];
 }
 
-// ── 2. All classes list ─────────────────────────────────────────────────────
-$classRows = $pdo->query("
-    SELECT c.id, c.name, c.section,
-           COALESCE(u.name, '—') AS class_teacher_name
-    FROM   classes c
-    LEFT JOIN users u ON u.id = c.class_teacher_id
-    ORDER BY c.name ASC, c.section ASC
-")->fetchAll();
-
-// ── 3. Per-class attendance last 7 days ────────────────────────────────────
-// Returns one row per (class, date): total students in class, how many marked
-$classDayData = $pdo->prepare("
-    SELECT
-        cs.class_id,
-        a.date,
-        COUNT(DISTINCT a.student_id)                                         AS marked_count,
-        SUM(CASE WHEN a.status IN ('present','late') THEN 1 ELSE 0 END)     AS present_count
-    FROM   attendance a
-    JOIN   class_subjects cs ON cs.id = a.class_subject_id
-    WHERE  a.date BETWEEN :start AND :end
-    GROUP  BY cs.class_id, a.date
-");
-$classDayData->execute([':start' => $last7[0], ':end' => $today]);
-$rawClassDay = $classDayData->fetchAll();
-
-// Index: [class_id][date] = [marked, present]
-$classDayIndex = [];
-foreach ($rawClassDay as $r) {
-    $classDayIndex[(int)$r['class_id']][$r['date']] = [
-        'marked'  => (int)$r['marked_count'],
-        'present' => (int)$r['present_count'],
+$trend = [];
+for ($i = 6; $i >= 0; $i--) {
+    $d       = date('Y-m-d', strtotime("-{$i} days"));
+    $records = $byDate[$d]['records'] ?? 0;
+    $present = $byDate[$d]['present'] ?? 0;
+    $trend[] = [
+        'date'    => $d,
+        'records' => $records,
+        'present' => $present,
+        'rate'    => $records > 0 ? round(($present / $records) * 100, 1) : null, // null = nothing marked
     ];
 }
+$todayRow = $trend[6];
 
-// Student counts per class
-$studentCountRows = $pdo->query("
-    SELECT class_id, COUNT(*) AS cnt FROM students WHERE class_id IS NOT NULL GROUP BY class_id
+// ── 3. Periods (class+subject) with a teacher but no attendance today ───────
+$st = $pdo->prepare("
+    SELECT cs.id AS class_subject_id,
+           c.name AS class_name, c.section AS class_section,
+           s.name AS subject_name,
+           u.name AS teacher_name
+    FROM class_subjects cs
+    JOIN classes  c ON c.id = cs.class_id
+    JOIN subjects s ON s.id = cs.subject_id
+    JOIN users    u ON u.id = cs.teacher_id
+    WHERE NOT EXISTS (
+        SELECT 1 FROM attendance a
+        WHERE a.class_subject_id = cs.id AND a.date = :today
+    )
+    ORDER BY c.name, c.section, s.name
+");
+$st->execute([':today' => $today]);
+$pending = $st->fetchAll();
+
+$totalPeriods = (int) $pdo->query("SELECT COUNT(*) FROM class_subjects WHERE teacher_id IS NOT NULL")->fetchColumn();
+
+// ── 4. Assignments created in the last 7 days ───────────────────────────────
+$st = $pdo->prepare("SELECT COUNT(*) FROM assignments WHERE created_at >= :since");
+$st->execute([':since' => $from . ' 00:00:00']);
+$assignmentsThisWeek = (int) $st->fetchColumn();
+
+// ── 5. Latest announcements ─────────────────────────────────────────────────
+$announcements = $pdo->query("
+    SELECT a.id, a.title, a.body, a.audience, a.published_at, u.name AS author_name
+    FROM announcements a
+    JOIN users u ON u.id = a.created_by
+    WHERE a.published_at IS NOT NULL AND a.published_at <= NOW()
+      AND (a.expires_at IS NULL OR a.expires_at >= NOW())
+    ORDER BY a.published_at DESC, a.id DESC
+    LIMIT 5
 ")->fetchAll();
-$studentCounts = [];
-foreach ($studentCountRows as $r) {
-    $studentCounts[(int)$r['class_id']] = (int)$r['cnt'];
+foreach ($announcements as &$a) {
+    $a['audience'] = $a['audience'] === '' ? [] : explode(',', (string) $a['audience']);
 }
+unset($a);
 
-// Build chart dataset: one series per class, attendance % per day
-$classAttendanceTrend = [];
-foreach ($classRows as $c) {
-    $cid    = (int)$c['id'];
-    $series = [];
-    foreach ($last7 as $d) {
-        $dayData = $classDayIndex[$cid][$d] ?? null;
-        if ($dayData !== null && $dayData['marked'] > 0) {
-            $pct = round(($dayData['present'] / $dayData['marked']) * 100, 1);
-        } else {
-            $pct = null; // no data for that day
-        }
-        $series[] = $pct;
-    }
-    $classAttendanceTrend[] = [
-        'class_id'    => $cid,
-        'class_name'  => $c['name'] . ' ' . $c['section'],
-        'daily_pcts'  => $series,  // null = no attendance recorded
-    ];
-}
-
-// ── 4. Classes not yet marked today ────────────────────────────────────────
-// A class is "not marked" if no attendance row exists today for any of its class_subjects
-$markedClassIds = $pdo->prepare("
-    SELECT DISTINCT cs.class_id
-    FROM   attendance a
-    JOIN   class_subjects cs ON cs.id = a.class_subject_id
-    WHERE  a.date = :today
-");
-$markedClassIds->execute([':today' => $today]);
-$markedSet = array_map('intval', $markedClassIds->fetchAll(PDO::FETCH_COLUMN));
-
-$pendingClasses = [];
-foreach ($classRows as $c) {
-    $cid = (int)$c['id'];
-    if (!in_array($cid, $markedSet, true)) {
-        $pendingClasses[] = [
-            'class_id'           => $cid,
-            'class_name'         => $c['name'],
-            'class_section'      => $c['section'],
-            'display_name'       => $c['name'] . ' ' . $c['section'],
-            'class_teacher_name' => $c['class_teacher_name'],
-            'student_count'      => $studentCounts[$cid] ?? 0,
-        ];
-    }
-}
-
-// ── 5. Assignments created this week ───────────────────────────────────────
-$weeklyAssignments = (int) $pdo->prepare("
-    SELECT COUNT(*) FROM assignments
-    WHERE created_at >= :start AND created_at <= :end
-")->execute([':start' => $weekStart . ' 00:00:00', ':end' => $weekEnd . ' 23:59:59'])
-    ? $pdo->query("
-        SELECT COUNT(*) FROM assignments
-        WHERE DATE(created_at) BETWEEN '{$weekStart}' AND '{$weekEnd}'
-    ")->fetchColumn()
-    : 0;
-// Re-query cleanly:
-$waSt = $pdo->prepare("
-    SELECT COUNT(*) FROM assignments
-    WHERE DATE(created_at) BETWEEN :s AND :e
-");
-$waSt->execute([':s' => $weekStart, ':e' => $weekEnd]);
-$weeklyAssignments = (int)$waSt->fetchColumn();
-
-// ── 6. Latest 5 announcements (all audiences) ──────────────────────────────
-$annSt = $pdo->query("
-    SELECT a.id, a.title, a.body, a.audience, a.published_at, a.expires_at,
-           u.name AS author_name
-    FROM   announcements a
-    JOIN   users u ON u.id = a.created_by
-    WHERE  a.published_at IS NOT NULL
-      AND  a.published_at <= NOW()
-      AND  (a.expires_at IS NULL OR a.expires_at >= NOW())
-    ORDER  BY a.published_at DESC, a.id DESC
-    LIMIT  5
-");
-$announcements = $annSt->fetchAll();
-
-// ── 7. Return ──────────────────────────────────────────────────────────────
 json_ok([
-    'today'      => $today,
-    'date_labels'=> $last7,
-    'kpis' => [
+    'today' => $today,
+    'kpis'  => [
         'total_students'          => $totalStudents,
         'total_teachers'          => $totalTeachers,
         'total_classes'           => $totalClasses,
-        'today_attendance_pct'    => $todayAttendancePct,
-        'pending_classes_count'   => count($pendingClasses),
-        'weekly_assignments'      => $weeklyAssignments,
+        'today_attendance_rate'   => $todayRow['rate'],          // null if nothing marked yet
+        'today_records'           => $todayRow['records'],
+        'periods_total'           => $totalPeriods,
+        'periods_pending_today'   => count($pending),
+        'assignments_this_week'   => $assignmentsThisWeek,
     ],
-    'class_attendance_trend' => $classAttendanceTrend,
-    'pending_classes'        => $pendingClasses,
-    'announcements'          => $announcements,
+    'attendance_trend'   => $trend,
+    'pending_attendance' => $pending,
+    'announcements'      => $announcements,
 ]);

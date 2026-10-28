@@ -2,17 +2,12 @@
 /**
  * CASPA School OS – pages/principal/students.php
  *
- * Principal Students Directory (delegates to shared students page).
+ * The principal uses the same read-only student directory as the admin page.
+ * pages/admin/students.php enforces roles itself (admin, principal, teacher).
  */
 
 declare(strict_types=1);
 
 define('ROOT', dirname(__DIR__, 2));
-
-require_once ROOT . '/includes/auth.php';
-
-session_boot();
-require_login();
-require_role('principal');
 
 require_once ROOT . '/pages/admin/students.php';

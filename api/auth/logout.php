@@ -11,7 +11,6 @@ declare(strict_types=1);
 define('ROOT', dirname(__DIR__, 2));
 
 require_once ROOT . '/includes/auth.php';
-require_once ROOT . '/includes/csrf_guard.php';
 
 session_boot();
 logout_user();

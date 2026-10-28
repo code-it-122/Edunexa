@@ -116,7 +116,7 @@ require_once ROOT . '/includes/layout_header.php';
     <!-- Populated via AJAX -->
 </div>
 
-<script>
+<?php ob_start(); // page script is printed by layout_footer.php AFTER jQuery loads ?>
 $(function () {
     'use strict';
 
@@ -348,7 +348,7 @@ $(function () {
     // Initial load
     loadAssignments();
 });
-</script>
+<?php $inlineJs = ob_get_clean(); ?>
 
 <?php endif; ?>
 
